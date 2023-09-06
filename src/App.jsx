@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import { socket } from "./socket";
 import { data } from "./data";
 
 function App() {
+  const [time, setTime] = useState(null);
   const [feeders, setFeeders] = useState(data);
   const [histories, setHistories] = useState([]);
   const [readFeeder, setReadFeeder] = useState({
@@ -36,10 +38,38 @@ function App() {
     setFeeders(newFeeders);
   }
 
-  useEffect(() => {}, [feeders, histories]);
+  useEffect(() => {
+    // Socket Connection
+    socket.on("connect", () => {
+      console.log("ws connected: ", socket.connected);
+      console.log("connection id: ", socket.id);
+    });
+
+    socket.on("connect_error", () => {
+      setTimeout(() => socket.connect(), 10000);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("ws disconnected: ", socket.connected);
+    });
+
+    // Socket Data
+    socket.on("eeprom", (data) => {
+      setReadFeeder(data);
+    });
+
+    socket.on("time", (data) => {
+      setTime(data);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {};
+  }, [feeders, histories]);
 
   return (
     <div>
+      <div>Current Time: {time}</div>
       <div>
         <h1>Feeders</h1>
         <br />
@@ -97,7 +127,11 @@ function App() {
           alignItems: "flex-start",
         }}
       >
-        <div>
+        <div
+          style={{
+            flexBasis: "60%",
+          }}
+        >
           <h1>Feeder Histori</h1>
           <br />
           <table cellPadding={3} border={1}>
@@ -122,7 +156,12 @@ function App() {
           </table>
         </div>
 
-        <div>
+        <div
+          style={{
+            flexBasis: "40%",
+            textAlign: "left",
+          }}
+        >
           <h1>Feeder Status</h1>
           <br />
           <div
@@ -134,12 +173,12 @@ function App() {
             }}
           >
             <p>Feeder Barcode: {readFeeder.feeder_barcode}</p>
-            <p>Feeder Name:{readFeeder.feeder_name}</p>
-            <p>Feeder Token:{readFeeder.feeder_token}</p>
-            <p>Feeder UUID:{readFeeder.feeder_uuid}</p>
-            <p>Feeder JWT:{readFeeder.feeder_jwt}</p>
-            <p>Feeder Type:{readFeeder.feeder_type}</p>
-            <p>Feeder Version:{readFeeder.feeder_version}</p>
+            <p>Feeder Name: {readFeeder.feeder_name}</p>
+            <p>Feeder Token: {readFeeder.feeder_token}</p>
+            <p>Feeder UUID: {readFeeder.feeder_uuid}</p>
+            <p>Feeder JWT: {readFeeder.feeder_jwt}</p>
+            <p>Feeder Type: {readFeeder.feeder_type}</p>
+            <p>Feeder Version: {readFeeder.feeder_version}</p>
           </div>
         </div>
       </div>
