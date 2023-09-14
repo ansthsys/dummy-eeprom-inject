@@ -1,75 +1,119 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import { socket } from "./socket";
-import { data } from "./data";
+// import { socket } from "./socket";
+// import { data } from "./data";
 
 function App() {
-  const [time, setTime] = useState(null);
-  const [feeders, setFeeders] = useState(data);
+  // const [time, setTime] = useState(null);
+  const [feeders, setFeeders] = useState([]);
   const [histories, setHistories] = useState([]);
   const [readFeeder, setReadFeeder] = useState({
-    feeder_barcode: "",
-    feeder_name: "",
-    feeder_token: "",
-    feeder_uuid: "",
-    feeder_jwt: "",
-    feeder_type: "",
-    feeder_version: "",
+    barcode: "",
+    name: "",
+    token: "",
+    uuid: "",
+    jwt: "",
+    type: "",
+    version: "",
   });
+  const URL_GET = "https://8226-103-129-95-34.ngrok-free.app";
+  const URL_EEPROM = "https://6fe4-103-129-95-34.ngrok-free.app";
 
   function injectFeeder(prop) {
-    const newFeeders = feeders.map((feeder) => {
-      if (feeder.feeder_name === prop.feeder_name) {
-        feeder.feeder_status = true;
+    console.log(typeof prop, prop);
+    fetch(`${URL_EEPROM}/write_data`, {
+      method: "POST",
+      headers: {
+        // "ngrok-skip-browser-warning": "true", // Header setting for request to ngrok free
+        // "User-Agent": "MyCustomUserAgent", // Header setting for request to ngrok free
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(prop),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        initData();
+
+        console.log(prop.name);
 
         const newHistory = {
           datetime: new Date().toLocaleString(),
-          feeder_name: feeder.feeder_name,
+          name: prop.name,
         };
 
         setHistories((prev) => {
           return [...prev, newHistory];
         });
-      }
+      })
+      .catch((err) => console.log(err));
+  }
 
-      return feeder;
-    });
+  function readData() {
+    fetch(`${URL_EEPROM}/read_data`, {
+      method: "POST",
+      headers: {
+        "ngrok-skip-browser-warning": "true", // Header setting for request to ngrok free
+        "User-Agent": "MyCustomUserAgent", // Header setting for request to ngrok free
+      },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res.data);
+        setReadFeeder(res.data);
+      })
+      .catch((err) => console.log(err));
 
-    setFeeders(newFeeders);
+    console.log(readFeeder);
+  }
+
+  // function initSocket() {
+  //   socket.on("connect", () => {
+  //     console.log("ws connected: ", socket.connected);
+  //     console.log("connection id: ", socket.id);
+  //   });
+
+  //   socket.on("connect_error", () => {
+  //     console.log("ws connect error: ", socket.connected);
+  //     setTimeout(() => socket.connect(), 60000);
+  //   });
+
+  //   socket.on("disconnect", () => {
+  //     console.log("ws disconnected: ", socket.connected);
+  //   });
+
+  //   // Socket Data
+  //   socket.on("eeprom", (data) => {
+  //     setReadFeeder(data);
+  //   });
+
+  //   socket.on("time", (data) => {
+  //     setTime(data);
+  //   });
+  // }
+
+  function initData() {
+    fetch(`${URL_GET}/eeprom`, {
+      headers: {
+        "ngrok-skip-browser-warning": "true", // Header setting for request to ngrok free
+        "User-Agent": "MyCustomUserAgent", // Header setting for request to ngrok free
+      },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        setFeeders(res.data);
+      })
+      .catch((err) => console.log(err));
   }
 
   useEffect(() => {
-    // Socket Connection
-    socket.on("connect", () => {
-      console.log("ws connected: ", socket.connected);
-      console.log("connection id: ", socket.id);
-    });
-
-    socket.on("connect_error", () => {
-      setTimeout(() => socket.connect(), 10000);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("ws disconnected: ", socket.connected);
-    });
-
-    // Socket Data
-    socket.on("eeprom", (data) => {
-      setReadFeeder(data);
-    });
-
-    socket.on("time", (data) => {
-      setTime(data);
-    });
-  }, []);
-
-  useEffect(() => {
-    return () => {};
-  }, [feeders, histories]);
+    initData();
+  }, [readFeeder]);
 
   return (
     <div>
-      <div>Current Time: {time}</div>
+      {/* <div>Current Time: {time}</div> */}
       <div>
         <h1>Feeders</h1>
         <br />
@@ -83,31 +127,29 @@ function App() {
               <td>JWT</td>
               <td>Type</td>
               <td>Version</td>
-              <td>Status</td>
               <td>Action</td>
             </tr>
           </thead>
           <tbody>
             {feeders.map((feeder, index) => {
               return (
-                <tr key={feeder.feeder_uuid + index}>
-                  <td>{feeder.feeder_barcode}</td>
-                  <td>{feeder.feeder_name}</td>
-                  <td>{feeder.feeder_token}</td>
-                  <td>{feeder.feeder_uuid}</td>
-                  <td>{feeder.feeder_jwt}</td>
-                  <td>{feeder.feeder_type}</td>
-                  <td>{feeder.feeder_version}</td>
-                  <td>{feeder.feeder_status ? "Injected" : "Available"}</td>
+                <tr key={index}>
+                  <td>{feeder.barcode}</td>
+                  <td>{feeder.name}</td>
+                  <td>{feeder.token}</td>
+                  <td>{feeder.uuid}</td>
+                  <td>{feeder.jwt}</td>
+                  <td>{feeder.type}</td>
+                  <td>{feeder.version}</td>
                   <td>
                     <button
                       style={{
-                        backgroundColor: feeder.feeder_status ? "red" : "green",
+                        backgroundColor: "green",
                         color: "black",
                         margin: 0,
                         padding: "5px 10px",
                       }}
-                      disabled={feeder.feeder_status}
+                      disabled={feeder.status}
                       onClick={() => injectFeeder(feeder)}
                     >
                       Inject
@@ -148,7 +190,7 @@ function App() {
                   <tr key={index + 1}>
                     <td>{index + 1}</td>
                     <td>{history.datetime}</td>
-                    <td>{history.feeder_name}</td>
+                    <td>{history.name}</td>
                   </tr>
                 );
               })}
@@ -163,6 +205,14 @@ function App() {
           }}
         >
           <h1>Feeder Status</h1>
+          <button
+            onClick={readData}
+            style={{
+              backgroundColor: "lightblue",
+            }}
+          >
+            Read
+          </button>
           <br />
           <div
             style={{
@@ -172,13 +222,13 @@ function App() {
               alignItems: "flex-start",
             }}
           >
-            <p>Feeder Barcode: {readFeeder.feeder_barcode}</p>
-            <p>Feeder Name: {readFeeder.feeder_name}</p>
-            <p>Feeder Token: {readFeeder.feeder_token}</p>
-            <p>Feeder UUID: {readFeeder.feeder_uuid}</p>
-            <p>Feeder JWT: {readFeeder.feeder_jwt}</p>
-            <p>Feeder Type: {readFeeder.feeder_type}</p>
-            <p>Feeder Version: {readFeeder.feeder_version}</p>
+            <p>Feeder Barcode: {readFeeder.Barcode}</p>
+            <p>Feeder Name: {readFeeder.Name}</p>
+            <p>Feeder Token: {readFeeder.Token}</p>
+            <p>Feeder UUID: {readFeeder.Uuid}</p>
+            <p>Feeder JWT: {readFeeder.Jwt}</p>
+            <p>Feeder Type: {readFeeder.Type}</p>
+            <p>Feeder Version: {readFeeder.Version}</p>
           </div>
         </div>
       </div>
